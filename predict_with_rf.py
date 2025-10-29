@@ -14,7 +14,7 @@ def predict_nps_with_rf(preDefectCount,
                         preClosedTrialDefectCount,
                         preResolvedTrialDefectCount):
     """
-    使用Random Forest模型基于6个缺陷变量预测NPS打分
+    使用用户调研模型基于6个缺陷变量预测NPS打分
     
     参数:
     preDefectCount: 上市前缺陷数
@@ -25,7 +25,7 @@ def predict_nps_with_rf(preDefectCount,
     preResolvedTrialDefectCount: 上市前已解决试用缺陷数
     
     返回:
-    预测的NPS打分
+    预测用户调研NPS打分
     """
     
     # 检查模型目录是否存在
@@ -66,6 +66,69 @@ def predict_nps_with_rf(preDefectCount,
     
     # 使用Random Forest模型进行预测
     prediction = rf_model.predict(scaled_data)[0]
+    
+    return prediction
+
+@mcp.tool
+def predict_nps_with_skynet(preDefectCount,
+                            preClosedDefectCount,
+                            preResolvedDefectCount,
+                            preTrialDefectCount,
+                            preClosedTrialDefectCount,
+                            preResolvedTrialDefectCount):
+    """
+    使用天网模型基于6个缺陷变量预测NPS打分
+    
+    参数:
+    preDefectCount: 上市前缺陷数
+    preClosedDefectCount: 上市前已关闭缺陷数
+    preResolvedDefectCount: 上市前已解决缺陷数
+    preTrialDefectCount: 上市前试用缺陷数
+    preClosedTrialDefectCount: 上市前已关闭试用缺陷数
+    preResolvedTrialDefectCount: 上市前已解决试用缺陷数
+    
+    返回:
+    预测天网NPS净推荐值
+    """
+    
+    # 检查模型目录是否存在
+    if not os.path.exists("skynet_model"):
+        raise FileNotFoundError("找不到skynet_model目录，请先运行训练脚本")
+    
+    try:
+        # 加载特征名称
+        feature_names = joblib.load("skynet_model/feature_names.joblib")
+        
+        # 加载标准化器
+        scaler = joblib.load("skynet_model/scaler.joblib")
+        
+        # 加载Skynet模型
+        skynet_model = joblib.load("skynet_model/gradient_boosting.joblib")
+        
+    except Exception as e:
+        raise Exception(f"加载模型时出错: {e}")
+    
+    # 创建输入数据字典
+    input_data = {
+        '上市前缺陷数': preDefectCount,
+        '上市前已关闭缺陷数': preClosedDefectCount,
+        '上市前已解决缺陷数': preResolvedDefectCount,
+        '上市前试用缺陷数': preTrialDefectCount,
+        '上市前已关闭试用缺陷数': preClosedTrialDefectCount,
+        '上市前已解决试用缺陷数': preResolvedTrialDefectCount
+    }
+    
+    # 转换输入数据为DataFrame
+    df = pd.DataFrame([input_data])
+    
+    # 确保特征顺序正确
+    df = df[feature_names]
+    
+    # 标准化特征
+    scaled_data = scaler.transform(df)
+    
+    # 使用Skynet模型进行预测
+    prediction = skynet_model.predict(scaled_data)[0]
     
     return prediction
 
